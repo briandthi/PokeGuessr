@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { getPokemonNameFr, getPokemonGeneration } from "@/lib/pokeapi";
 import { StreakDisplay } from "./StreakDisplay";
+import { Badge } from "@/components/ui/badge";
 
 type UserStats = {
   pokemons: {
@@ -42,6 +43,28 @@ async function updateUserStats(pokemonId: number, generation: number | null, res
   localStorage.setItem("user_stats", JSON.stringify(stats));
 }
 
+function getPokemonStatus(pokemonId: number): { status: "first-time" | "mastered" | "validate" | "data"; ratio: number | null } {
+  try {
+    const stats = JSON.parse(localStorage.getItem("user_stats") || "") as UserStats;
+    if (!stats || !Array.isArray(stats.pokemons)) {
+      return { status: "first-time", ratio: null };
+    }
+
+    const entry = stats.pokemons.find((p: UserStats["pokemons"][0]) => p.id === pokemonId);
+    if (!entry || entry.attempts === 0) {
+      return { status: "first-time", ratio: null };
+    }
+
+    const ratio = entry.success / entry.attempts;
+    if (ratio >= 0.75) return { status: "mastered", ratio };
+    if (ratio >= 0.5) return { status: "validate", ratio };
+    if (ratio >= 0.25) return { status: "validate", ratio };
+    return { status: "data", ratio };
+  } catch {
+    return { status: "first-time", ratio: null };
+  }
+}
+
 type GuessPokemonCardProps = {
   pokemonId: number;
   onResult?: (
@@ -52,6 +75,7 @@ type GuessPokemonCardProps = {
   ) => void;
   streak?: number;
   streakAnim?: "up" | "reset" | null;
+  maxAttempts?: number;
 };
 
 export function GuessPokemonCard({
@@ -59,12 +83,14 @@ export function GuessPokemonCard({
   onResult,
   streak,
   streakAnim,
+  maxAttempts = 1,
 }: GuessPokemonCardProps) {
   const [answer, setAnswer] = React.useState("");
   const [solution, setSolution] = React.useState<string | null>(null);
   const [feedback, setFeedback] = React.useState<
     null | "correct" | "incorrect"
   >(null);
+  const [attempts, setAttempts] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   // Callback ref pour focus auto dès que l'input est monté
   const inputRef = React.useRef<HTMLInputElement | null>(null);
@@ -107,24 +133,43 @@ export function GuessPokemonCard({
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
   }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!solution) return;
     const isCorrect =
       normalizeString(answer) === normalizeString(solution);
-    setFeedback(isCorrect ? "correct" : "incorrect");
-    // Enregistrement dans le localStorage avec génération
+      if (!isCorrect) {
+      const nextAttempts = attempts + 1;
+      setAttempts(nextAttempts);
+      setFeedback("incorrect");
+      
+      const generation = await getPokemonGeneration(pokemonId);
+      await updateUserStats(pokemonId, generation, "error");
+      
+      // Si on a atteint le nombre max d'essais, on envoie une erreur finale avec un délai
+      if (nextAttempts >= maxAttempts) {
+        if (onResult) {
+          setTimeout(() => {
+            onResult(answer, solution, false, false);
+          }, 800);
+        }
+        return;
+      }
+
+      // Si on n'a pas atteint le nombre max d'essais, on continue
+      setAnswer(""); // Vider le champ pour la prochaine tentative
+      return;
+    }
+    
+    // Si la réponse est correcte
+    setFeedback("correct");
     const generation = await getPokemonGeneration(pokemonId);
-    await updateUserStats(
-      pokemonId,
-      generation,
-      isCorrect ? "success" : "error"
-    );
+    await updateUserStats(pokemonId, generation, "success");
+    
     // Le focus est aussi garanti par le callback ref
     if (onResult) {
       setTimeout(() => {
-        onResult(answer, solution, isCorrect, false);
+        onResult(answer, solution, true, false);
       }, 800);
     }
   };
@@ -150,13 +195,34 @@ export function GuessPokemonCard({
         <CardTitle>Qui est ce Pokémon ?</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-4">
-        {pokemonId && (
-          <img
-            src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`}
-            alt="Pokémon"
-            className="w-80 h-80 object-contain"
-            style={{ imageRendering: "pixelated" }}
-          />
+        {pokemonId && (          <>
+            <img
+              src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`}
+              alt="Pokémon"
+              className="w-80 h-80 object-contain"
+              style={{ imageRendering: "pixelated" }}
+            />
+            {(() => {
+              const status = getPokemonStatus(pokemonId);
+              return (
+                <Badge 
+                  variant={
+                    status.status === "first-time" ? "default" :
+                    status.status === "mastered" ? "secondary" :
+                    status.status === "validate" ? "outline" :
+                    "destructive"
+                  }
+                  className="mt-2"
+                >
+                  {status.status === "first-time" ? "Première rencontre" :
+                   status.status === "mastered" ? "Maîtrisé" :
+                   status.status === "validate" ? "À valider" :
+                   "À revoir"}
+                  {status.ratio !== null && ` (${Math.round(status.ratio * 100)}%)`}
+                </Badge>
+              );
+            })()}
+          </>
         )}
         <form onSubmit={handleSubmit} className="w-full flex flex-col gap-2">
           <input
@@ -188,15 +254,19 @@ export function GuessPokemonCard({
               Passer (Echap)
             </Button>
           </div>
-        </form>
-        {feedback === "correct" && (
+        </form>        {feedback === "correct" && (
           <div className="text-green-600 font-semibold">
             Bravo, c'est la bonne réponse !
           </div>
         )}
         {feedback === "incorrect" && (
           <div className="text-red-600 font-semibold">
-            Mauvaise réponse. Réessaie !
+            Mauvaise réponse. 
+            {attempts < maxAttempts && (
+              <span className="text-sm ml-2">
+                {maxAttempts - attempts} essai{maxAttempts - attempts > 1 ? 's' : ''} restant{maxAttempts - attempts > 1 ? 's' : ''}
+              </span>
+            )}
           </div>
         )}
       </CardContent>

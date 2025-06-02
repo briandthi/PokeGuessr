@@ -1,7 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import url("https://fonts.googleapis.com/css2?family=Bangers&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Mona%20Sans&display=swap");
 
 .font-display {
   font-family: var(--display-family);
@@ -22,10 +20,6 @@ a:hover {
   color: #535bf2;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
 :root {
   --base-50: oklch(0.9849 0.0009 66.8);
   --base-100: oklch(0.9706 0.0017 67.8);
@@ -92,9 +86,9 @@ h1 {
 }
 
 .dark {
-  --background: var(--base-950);
+  --background: var(--base-800);
   --foreground: var(--base-200);
-  --card: var(--base-950);
+  --card: var(--base-800);
   --card-foreground: var(--base-200);
   --popover: var(--base-950);
   --popover-foreground: var(--base-200);

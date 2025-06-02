@@ -3,6 +3,7 @@ import { Defi } from "@/components/Defi";
 import { UserStatsTabs } from "@/components/UserStatsTabs";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { getGenerationPokemonIds } from "@/lib/pokeapi";
+import { ThemeProvider } from "./components/theme-provider";
 
 function App() {
   React.useEffect(() => {
@@ -23,8 +24,9 @@ function App() {
   }, []);
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-start w-full">
-      <h1 className="mt-4">Pokemon Guessr</h1>
+      
+    <div className="bg-background text-white flex min-h-svh flex-col items-center justify-start w-full">
+      <h1 className="mt-4 text-white font-bold text-xl">Pokemon Guessr</h1>
       <Tabs defaultValue="defi" className="w-full max-w-2xl mt-8">
         <TabsList className="grid w-full grid-cols-3 mb-2">
           <TabsTrigger value="defi">Défi</TabsTrigger>
@@ -41,6 +43,7 @@ function App() {
         </TabsContent>
       </Tabs>
     </div>
+
   );
 }
 

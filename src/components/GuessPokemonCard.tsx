@@ -22,7 +22,11 @@ type UserStats = {
   }[];
 };
 
-async function updateUserStats(pokemonId: number, generation: number | null, result: "success" | "error" | "pass") {
+async function updateUserStats(
+  pokemonId: number,
+  generation: number | null,
+  result: "success" | "error" | "pass"
+) {
   let stats: UserStats;
   try {
     stats = JSON.parse(localStorage.getItem("user_stats") || "");
@@ -32,7 +36,14 @@ async function updateUserStats(pokemonId: number, generation: number | null, res
   }
   let entry = stats.pokemons.find((p) => p.id === pokemonId);
   if (!entry) {
-    entry = { id: pokemonId, generation, attempts: 0, success: 0, error: 0, pass: 0 };
+    entry = {
+      id: pokemonId,
+      generation,
+      attempts: 0,
+      success: 0,
+      error: 0,
+      pass: 0,
+    };
     stats.pokemons.push(entry);
   }
   entry.generation = generation; // Toujours à jour si jamais modifié
@@ -43,14 +54,21 @@ async function updateUserStats(pokemonId: number, generation: number | null, res
   localStorage.setItem("user_stats", JSON.stringify(stats));
 }
 
-function getPokemonStatus(pokemonId: number): { status: "first-time" | "mastered" | "validate" | "data"; ratio: number | null } {
+function getPokemonStatus(pokemonId: number): {
+  status: "first-time" | "mastered" | "validate" | "data";
+  ratio: number | null;
+} {
   try {
-    const stats = JSON.parse(localStorage.getItem("user_stats") || "") as UserStats;
+    const stats = JSON.parse(
+      localStorage.getItem("user_stats") || ""
+    ) as UserStats;
     if (!stats || !Array.isArray(stats.pokemons)) {
       return { status: "first-time", ratio: null };
     }
 
-    const entry = stats.pokemons.find((p: UserStats["pokemons"][0]) => p.id === pokemonId);
+    const entry = stats.pokemons.find(
+      (p: UserStats["pokemons"][0]) => p.id === pokemonId
+    );
     if (!entry || entry.attempts === 0) {
       return { status: "first-time", ratio: null };
     }
@@ -88,7 +106,7 @@ export function GuessPokemonCard({
   const [answer, setAnswer] = React.useState("");
   const [solution, setSolution] = React.useState<string | null>(null);
   const [feedback, setFeedback] = React.useState<
-    null | "correct" | "incorrect"
+    null | "correct" | "incorrect" | "pass"
   >(null);
   const [attempts, setAttempts] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
@@ -127,31 +145,31 @@ export function GuessPokemonCard({
 
   // Comparaison insensible à la casse et aux accents
   function normalizeString(str: string) {
-    return str
-      .trim()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-  }
+      return str
+        .trim()
+        .toLowerCase()
+        .replace(/[♀♂]/g, "") // Supprime les caractères spéciaux de genre
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!solution) return;
-    const isCorrect =
-      normalizeString(answer) === normalizeString(solution);
-      if (!isCorrect) {
+    const isCorrect = normalizeString(answer) === normalizeString(solution);
+    if (!isCorrect) {
       const nextAttempts = attempts + 1;
       setAttempts(nextAttempts);
       setFeedback("incorrect");
-      
+
       const generation = await getPokemonGeneration(pokemonId);
       await updateUserStats(pokemonId, generation, "error");
-      
+
       // Si on a atteint le nombre max d'essais, on envoie une erreur finale avec un délai
       if (nextAttempts >= maxAttempts) {
         if (onResult) {
           setTimeout(() => {
             onResult(answer, solution, false, false);
-          }, 800);
+          }, 1200);
         }
         return;
       }
@@ -160,12 +178,12 @@ export function GuessPokemonCard({
       setAnswer(""); // Vider le champ pour la prochaine tentative
       return;
     }
-    
+
     // Si la réponse est correcte
     setFeedback("correct");
     const generation = await getPokemonGeneration(pokemonId);
     await updateUserStats(pokemonId, generation, "success");
-    
+
     // Le focus est aussi garanti par le callback ref
     if (onResult) {
       setTimeout(() => {
@@ -178,10 +196,12 @@ export function GuessPokemonCard({
     // Enregistrement dans le localStorage pour "pass" avec génération
     const generation = await getPokemonGeneration(pokemonId);
     await updateUserStats(pokemonId, generation, "pass");
-    // Refocus input après passage (sauf si on change de Pokémon)
-    // Le focus est aussi garanti par le callback ref
+    setFeedback("pass");
+    // Affiche la solution comme pour une mauvaise réponse finale
     if (onResult) {
-      onResult(answer, solution, false, true);
+      setTimeout(() => {
+        onResult(answer, solution, false, true);
+      }, 1200);
     }
   };
 
@@ -195,7 +215,8 @@ export function GuessPokemonCard({
         <CardTitle>Qui est ce Pokémon ?</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-4">
-        {pokemonId && (          <>
+        {pokemonId && (
+          <>
             <img
               src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`}
               alt="Pokémon"
@@ -205,20 +226,27 @@ export function GuessPokemonCard({
             {(() => {
               const status = getPokemonStatus(pokemonId);
               return (
-                <Badge 
+                <Badge
                   variant={
-                    status.status === "first-time" ? "default" :
-                    status.status === "mastered" ? "secondary" :
-                    status.status === "validate" ? "outline" :
-                    "destructive"
+                    status.status === "first-time"
+                      ? "default"
+                      : status.status === "mastered"
+                      ? "secondary"
+                      : status.status === "validate"
+                      ? "outline"
+                      : "destructive"
                   }
                   className="mt-2"
                 >
-                  {status.status === "first-time" ? "Première rencontre" :
-                   status.status === "mastered" ? "Maîtrisé" :
-                   status.status === "validate" ? "À valider" :
-                   "À revoir"}
-                  {status.ratio !== null && ` (${Math.round(status.ratio * 100)}%)`}
+                  {status.status === "first-time"
+                    ? "Première rencontre"
+                    : status.status === "mastered"
+                    ? "Maîtrisé"
+                    : status.status === "validate"
+                    ? "À valider"
+                    : "À revoir"}
+                  {status.ratio !== null &&
+                    ` (${Math.round(status.ratio * 100)}%)`}
                 </Badge>
               );
             })()}
@@ -254,23 +282,42 @@ export function GuessPokemonCard({
               Passer (Echap)
             </Button>
           </div>
-        </form>        {feedback === "correct" && (
+        </form>{" "}
+        {feedback === "correct" && (
           <div className="text-green-600 font-semibold">
             Bravo, c'est la bonne réponse !
           </div>
         )}
         {feedback === "incorrect" && (
           <div className="text-red-600 font-semibold">
-            Mauvaise réponse. 
-            {attempts < maxAttempts && (
+            Mauvaise réponse.
+            {attempts < maxAttempts ? (
               <span className="text-sm ml-2">
-                {maxAttempts - attempts} essai{maxAttempts - attempts > 1 ? 's' : ''} restant{maxAttempts - attempts > 1 ? 's' : ''}
+                {maxAttempts - attempts} essai
+                {maxAttempts - attempts > 1 ? "s" : ""} restant
+                {maxAttempts - attempts > 1 ? "s" : ""}
+              </span>
+            ) : (
+              <span className="text-sm ml-2">
+                <Badge className="ml-1 font-bold" variant="outline">
+                  {solution ? normalizeString(solution) : ""}
+                </Badge>
               </span>
             )}
           </div>
         )}
+         {feedback === "pass" && (
+           <div className="text-yellow-700 font-semibold">
+             Passé. La réponse était :
+             <span className="text-sm ml-2">
+               <Badge className="ml-1 font-bold" variant="outline">
+                 {solution ? normalizeString(solution) : ""}
+               </Badge>
+             </span>
+           </div>
+         )}
       </CardContent>
-      <CardFooter />
-    </Card>
-  );
-}
+       <CardFooter />
+     </Card>
+   );
+ }

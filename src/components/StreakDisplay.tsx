@@ -37,7 +37,7 @@ export function StreakDisplay({ streak, anim }: StreakDisplayProps) {
 
   return (
     <div
-      className="absolute top-0 right-0 flex items-center gap-1 z-20 select-none pointer-events-none justify-center rotate-45"
+      className="absolute -top-4 -right-7 flex items-center gap-1 z-20 select-none pointer-events-none justify-center rotate-45"
       style={{
         minWidth: 64,
         minHeight: 40,

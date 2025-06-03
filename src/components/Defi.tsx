@@ -1,12 +1,5 @@
 import React from "react";
 import { GuessPokemonCard } from "./GuessPokemonCard";
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "@/components/ui/accordion";
-import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +27,6 @@ const MODES = ["progres", "normal", "revision"] as const;
 type Mode = (typeof MODES)[number];
 
 export function Defi() {
-  const [open, setOpen] = React.useState(false);
   // Initialisation des paramètres depuis le localStorage
   const [selectedGens, setSelectedGens] = React.useState<number[]>(() => {
     const saved = localStorage.getItem("defi.selectedGens");
@@ -62,7 +54,7 @@ export function Defi() {
       const n = Number(saved);
       if (MAX_ATTEMPTS_OPTIONS.includes(n)) return n;
     }
-    return 1;
+    return 3;
   });
   const [mode, setMode] = React.useState<Mode>(() => {
     const saved = localStorage.getItem("defi.mode") as Mode;

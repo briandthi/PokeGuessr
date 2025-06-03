@@ -15,13 +15,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { getGenerationPokemonIds } from "@/lib/pokeapi";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   RadarChart,
   Radar,
@@ -29,7 +23,9 @@ import {
   PolarGrid,
   Tooltip,
   ResponsiveContainer,
+  PolarRadiusAxis,
 } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "./ui/chart";
 
 type UserStats = {
   pokemons: {
@@ -67,6 +63,17 @@ export function UserStatsTabs() {
     foundStroke: "#d1b3ff", // fallback violet clair
     foundFill: "#d1b3ff",
   });
+
+ const chartConfig = {
+  testés: {
+    label: "Testés",
+    color: "#a259ff",
+  },
+  trouvés: {
+    label: "Trouvés",
+    color: "#d1b3ff",
+  },
+} satisfies ChartConfig
 
   React.useEffect(() => {
     // Récupère dynamiquement les couleurs CSS de la charte graphique
@@ -116,56 +123,112 @@ export function UserStatsTabs() {
     return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
   }
 
-  // Préparation des données pour le radar chart
+  // Préparation des données pour le radar chart (ratios)
   const radarData = Object.entries(GENERATION_LABELS).map(([genStr, label]) => {
     const gen = Number(genStr);
     const pokemonsInGen = genData[gen] || [];
+    const total = pokemonsInGen.length;
     const userStats = stats.pokemons.filter((p) => p.generation === gen);
     const tested = userStats.filter((p) => p.attempts > 0).length;
     const found = userStats.filter((p) => p.success > 0).length;
     return {
       generation: label,
-      testés: tested,
-      trouvés: found,
-      total: pokemonsInGen.length,
+      testés: total > 0 ? tested / total : 0,
+      trouvés: total > 0 ? found / total : 0,
+      testedCount: tested,
+      foundCount: found,
+      totalPercent: 1,
+      total,
     };
   });
 
+  // Calcul du nombre maximal de Pokémon dans une génération (pour l'échelle du radar)
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">Statistiques par génération</h2>
-      <Card className="mb-6">
-        <CardContent>
-          <div className="w-full flex justify-center">
-            <ResponsiveContainer width={400} height={300}>
-              <RadarChart data={radarData}>
-                <PolarGrid />
-                <PolarAngleAxis dataKey="generation" />
-                <Tooltip
-                  formatter={(value: number, name: string) => [
-                    `${value}`,
-                    name.charAt(0).toUpperCase() + name.slice(1),
-                  ]}
-                />
-                <Radar
-                  name="Testés"
-                  dataKey="testés"
-                  stroke={radarColors.testedStroke}
-                  fill={radarColors.testedFill}
-                  fillOpacity={0.3}
-                />
-                <Radar
-                  name="Trouvés"
-                  dataKey="trouvés"
-                  stroke={radarColors.foundStroke}
-                  fill={radarColors.foundFill}
-                  fillOpacity={0.5}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="w-full flex justify-center">
+        <ResponsiveContainer width={400} height={300}>
+          <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[300px]">
+            <RadarChart data={radarData}>
+              <PolarGrid className="fill-(--foreground) opacity-20" />
+              <PolarAngleAxis dataKey="generation" />
+              {/* Correction : forcer l'échelle du radar */}
+              <ChartTooltip
+                cursor={false}
+                formatter={(value: number, name: string, props: any) => {
+                if (name === "Total") {
+                  // Ne rien afficher pour la courbe "Total"
+                  return null;
+                }
+                const { payload } = props;
+                let count = 0;
+                let total = 0;
+                if (name === "Testés") {
+                  count = payload.testedCount;
+                  total = payload.total;
+                } else if (name === "Trouvés") {
+                  count = payload.foundCount;
+                  total = payload.total;
+                }
+                const percent =
+                  total > 0 ? ((count / total) * 100).toFixed(1) : "0";
+                return [
+                  `${count} / ${total} (${percent}%)`,
+                  name.charAt(0).toUpperCase() + name.slice(1),
+                ];
+              }}
+                content={<ChartTooltipContent indicator="line" />}
+              />
+              {/* <Tooltip
+              formatter={(value: number, name: string, props: any) => {
+                if (name === "Total") {
+                  // Ne rien afficher pour la courbe "Total"
+                  return null;
+                }
+                const { payload } = props;
+                let count = 0;
+                let total = 0;
+                if (name === "Testés") {
+                  count = payload.testedCount;
+                  total = payload.total;
+                } else if (name === "Trouvés") {
+                  count = payload.foundCount;
+                  total = payload.total;
+                }
+                const percent =
+                  total > 0 ? ((count / total) * 100).toFixed(1) : "0";
+                return [
+                  `${count} / ${total} (${percent}%)`,
+                  name.charAt(0).toUpperCase() + name.slice(1),
+                ];
+              }}
+            /> */}
+              <Radar
+                name="Testés"
+                dataKey="testés"
+                stroke={radarColors.testedStroke}
+                fill={radarColors.testedFill}
+                fillOpacity={0.3}
+                // L'échelle du radar va de 0 à 1 (ratio)
+              />
+              <Radar
+                name="Trouvés"
+                dataKey="trouvés"
+                stroke={radarColors.foundStroke}
+                fill={radarColors.foundFill}
+                fillOpacity={0.5}
+              />
+              <Radar
+                name="Total"
+                dataKey="totalPercent"
+                stroke="white"
+                fill="white"
+                fillOpacity={0}
+              />
+            </RadarChart>
+          </ChartContainer>
+        </ResponsiveContainer>
+      </div>
       <Accordion type="multiple" className="w-full">
         {Object.entries(GENERATION_LABELS).map(([genStr, label]) => {
           const gen = Number(genStr);

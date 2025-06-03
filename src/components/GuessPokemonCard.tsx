@@ -169,7 +169,7 @@ export function GuessPokemonCard({
         if (onResult) {
           setTimeout(() => {
             onResult(answer, solution, false, false);
-          }, 1200);
+          }, 1400);
         }
         return;
       }
@@ -201,7 +201,7 @@ export function GuessPokemonCard({
     if (onResult) {
       setTimeout(() => {
         onResult(answer, solution, false, true);
-      }, 1200);
+      }, 1400);
     }
   };
 
@@ -298,21 +298,17 @@ export function GuessPokemonCard({
                 {maxAttempts - attempts > 1 ? "s" : ""}
               </span>
             ) : (
-              <span className="text-sm ml-2">
-                <Badge className="ml-1 font-bold" variant="outline">
-                  {solution ? normalizeString(solution) : ""}
-                </Badge>
-              </span>
+             <span className="text-lg ml-2 font-bold text-primary-foreground border-b-2 border-primary">
+                 {solution ? normalizeString(solution) : ""}
+             </span>
             )}
           </div>
         )}
          {feedback === "pass" && (
            <div className="text-yellow-700 font-semibold">
              Passé. La réponse était :
-             <span className="text-sm ml-2">
-               <Badge className="ml-1 font-bold" variant="outline">
+             <span className="text-lg ml-2 font-bold text-primary-foreground border-b-2 border-primary">
                  {solution ? normalizeString(solution) : ""}
-               </Badge>
              </span>
            </div>
          )}

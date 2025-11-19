@@ -1,0 +1,61 @@
+# Dépendances
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build
+dist
+build
+.next
+
+# Environnement
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+
+# Cache
+.cache
+.parcel-cache
+.eslintcache
+
+# Fichiers temporaires
+.tmp
+.temp
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+README.md
+docs
+
+# Tests
+coverage
+.nyc_output
+
+# Autres
+*.tgz
+*.tar.gz

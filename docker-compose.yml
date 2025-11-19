@@ -1,0 +1,39 @@
+services:
+  pokeguess:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pokeguess
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 0.8
+    volumes:
+      - ./nginx-logs:/var/log/nginx
+    environment:
+      - NODE_ENV=production
+    networks:
+      - webproxy
+    # Healthcheck
+    # healthcheck:
+    #   test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 30s
+    expose:
+      - "80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pokeguess.rule=Host(`pokeguessr.tbriand.com`)"
+      - "traefik.http.routers.pokeguess.entrypoints=websecure"
+      - "traefik.http.routers.pokeguess.tls.certresolver=myresolver"
+      # Redirection HTTP vers HTTPS
+      - "traefik.http.routers.pokeguess-http.rule=Host(`pokeguessr.tbriand.com`)"
+      - "traefik.http.routers.pokeguess-http.entrypoints=web"
+      - "traefik.http.routers.pokeguess-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.pokeguess.middlewares=sse-headers"
+
+networks:
+  webproxy:
+    external: true

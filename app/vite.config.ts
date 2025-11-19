@@ -11,6 +11,6 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   }, server: {
-    allowedHosts: ['pokeguessr.thibaultbriand.fr']
+    allowedHosts: ['pokeguessr.tbriand.com']
   }
 });

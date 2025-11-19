@@ -1,0 +1,17 @@
+services:
+  pokeguess:
+    image: node:23
+    container_name: pokeguess
+    working_dir: /app
+    volumes:
+      - ./app:/app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    command: sh -c "npm install && npm run dev"
+    restart: unless-stopped
+
+networks:
+  default:
+    name: pokeguess-network
